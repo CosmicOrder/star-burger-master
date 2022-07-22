@@ -1,3 +1,4 @@
+import phonenumbers
 from django.http import JsonResponse
 from django.templatetags.static import static
 from rest_framework import status
@@ -62,12 +63,55 @@ def product_list_api(request):
 @api_view(['POST'])
 def register_order(request):
     order_detail = request.data
+    try:
+        # firstname check
+        firstname = order_detail['firstname']
+        if firstname is None:
+            return Response({
+                'error': 'firstname: Это поле не может быть пустым.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+        elif not isinstance(firstname, str):
+            return Response({
+                'error': 'firstname: Not a valid string.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+        # lastname check
+        lastname = order_detail['lastname']
+        if lastname is None:
+            return Response({
+                'error': 'lastname: Это поле не может быть пустым.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+        # phonenumber check
+        phonenumber = order_detail['phonenumber']
+        if phonenumber is None:
+            return Response({
+                'error': 'phonenumber: Это поле не может быть пустым.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+        elif phonenumber:
+            parse_number = phonenumbers.parse(phonenumber)
+            if not phonenumbers.is_valid_number(parse_number):
+                return Response({
+                    'error': 'phonenumber: Введен некорректный номер телефона.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({
+                'error': 'phonenumber: Это поле не может быть пустым.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        # address check
+        address = order_detail['address']
+        if address is None:
+            return Response({
+                'error': 'address: Это поле не может быть пустым.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except KeyError as ex:
+        return Response({
+            'error': f'{ex} обязательное поле',
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     order = Order.objects.create(
-        firstname=order_detail['firstname'],
-        lastname=order_detail['lastname'],
-        phonenumber=order_detail['phonenumber'],
-        address=order_detail['address'],
+        firstname=firstname,
+        lastname=lastname,
+        phonenumber=phonenumber,
+        address=address,
     )
 
     try:
@@ -80,14 +124,20 @@ def register_order(request):
     if isinstance(products, list):
         if products:
             for order_item in products:
-                OrderItem.objects.create(
-                    order=order,
-                    product=Product.objects.get(id=order_item['product']),
-                    quantity=order_item['quantity'],
-                )
-            return Response({
-                'success': True,
-            })
+                product_id = order_item['product']
+                if product_id <= len(Product.objects.all()):
+                    OrderItem.objects.create(
+                        order=order,
+                        product=Product.objects.get(id=product_id),
+                        quantity=order_item['quantity'],
+                    )
+                    return Response({
+                        'success': True,
+                    })
+                else:
+                    return Response({
+                        'error': f'products: Недопустимый первичный ключ {product_id}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({
                 'error': 'products: Этот список не может быть пустым.',
