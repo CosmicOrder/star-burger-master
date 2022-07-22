@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 from django.templatetags.static import static
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -60,24 +61,44 @@ def product_list_api(request):
 
 @api_view(['POST'])
 def register_order(request):
-    try:
-        order_detail = request.data
-    except ValueError:
-        return Response({
-            'success': False,
-        })
+    order_detail = request.data
+
     order = Order.objects.create(
         firstname=order_detail['firstname'],
         lastname=order_detail['lastname'],
         phonenumber=order_detail['phonenumber'],
         address=order_detail['address'],
     )
-    for order_item in order_detail['products']:
-        OrderItem.objects.create(
-            order=order,
-            product=Product.objects.get(id=order_item['product']),
-            quantity=order_item['quantity'],
-        )
-    return Response({
-        'success': True,
-    })
+
+    try:
+        products = order_detail['products']
+    except KeyError:
+        return Response({
+            'error': 'products: Обязательное поле.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if isinstance(products, list):
+        if products:
+            for order_item in products:
+                OrderItem.objects.create(
+                    order=order,
+                    product=Product.objects.get(id=order_item['product']),
+                    quantity=order_item['quantity'],
+                )
+            return Response({
+                'success': True,
+            })
+        else:
+            return Response({
+                'error': 'products: Этот список не может быть пустым.',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    elif isinstance(products, str):
+        return Response({
+            'error': 'products: Ожидался list со значениями, но был '
+                     'получен str.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+    elif products is None:
+        return Response({
+            'error': 'products: Это поле не может быть пустым.',
+        }, status=status.HTTP_400_BAD_REQUEST)
