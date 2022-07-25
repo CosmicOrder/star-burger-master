@@ -81,6 +81,6 @@ def register_order(request):
             quantity=product['quantity'],
         )
 
-    return Response({
-        'success': 'ok!',
-    })
+    serializer = OrderSerializer(order)
+
+    return Response(serializer.data)
