@@ -129,13 +129,11 @@ class Order(models.Model):
         'Имя',
         max_length=100,
         db_index=True,
-        blank=True,
     )
     lastname = models.CharField(
         'Фамилия',
         max_length=100,
         db_index=True,
-        blank=True,
     )
     phonenumber = PhoneNumberField(
         'Телефон',
