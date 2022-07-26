@@ -1,6 +1,24 @@
-from django.db import models
 from django.core.validators import MinValueValidator
+from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
+
+
+class OrderQuerySet(models.QuerySet):
+    def fetch_with_order_price(self):
+        total_prices = []
+        for order in self.all().prefetch_related('item') \
+                               .prefetch_related('item__product'):
+            total_prices.append((order.id,
+                                 sum(int(order_item.product.price
+                                         * order_item.quantity) for
+                                     order_item in order.item.all())))
+
+        order_and_prices = dict(total_prices)
+
+        for order in self:
+            order.total_price = order_and_prices[order.id]
+
+        return list(self)
 
 
 class Restaurant(models.Model):
@@ -31,8 +49,8 @@ class ProductQuerySet(models.QuerySet):
     def available(self):
         products = (
             RestaurantMenuItem.objects
-            .filter(availability=True)
-            .values_list('product')
+                .filter(availability=True)
+                .values_list('product')
         )
         return self.filter(pk__in=products)
 
@@ -143,6 +161,7 @@ class Order(models.Model):
         'Адрес доставки',
         db_index=True,
     )
+    objects = OrderQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'Заказ'
@@ -178,4 +197,4 @@ class OrderItem(models.Model):
         ]
 
     def __str__(self):
-        return self.order.address
+        return self.product.name
