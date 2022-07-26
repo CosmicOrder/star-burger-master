@@ -184,6 +184,13 @@ class OrderItem(models.Model):
         related_name='order_item',
         verbose_name='товар',
     )
+    price = models.DecimalField(
+        'цена',
+        max_digits=8,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        null=True,
+    )
     quantity = models.PositiveIntegerField(
         'Количество',
         db_index=True,
