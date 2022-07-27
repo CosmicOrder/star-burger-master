@@ -143,6 +143,23 @@ class RestaurantMenuItem(models.Model):
 
 
 class Order(models.Model):
+    ACCEPTED = 'Принят'
+    COLLECTING = 'Собирается'
+    DELIVERING = 'Курьер выехал'
+    DONE = 'Выполнен'
+    STATUSES = {
+        (ACCEPTED, 'Принят'),
+        (COLLECTING, 'Собирается'),
+        (DELIVERING, 'Курьер выехал'),
+        (DONE, 'Выполнен'),
+    }
+    status = models.CharField(
+        'Статус заказа',
+        max_length=100,
+        db_index=True,
+        choices=STATUSES,
+        default=ACCEPTED,
+    )
     firstname = models.CharField(
         'Имя',
         max_length=100,
@@ -157,8 +174,9 @@ class Order(models.Model):
         'Телефон',
         db_index=True,
     )
-    address = models.TextField(
+    address = models.CharField(
         'Адрес доставки',
+        max_length=300,
         db_index=True,
     )
     objects = OrderQuerySet.as_manager()
