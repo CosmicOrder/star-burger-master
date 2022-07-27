@@ -156,12 +156,25 @@ class Order(models.Model):
         (DELIVERING, 'Курьер выехал'),
         (DONE, 'Выполнен'),
     }
+    CASH = 'При получении'
+    ON_SITE = 'На сайте'
+    PAYMENT_METHODS = {
+        (CASH, 'При получении'),
+        (ON_SITE, 'На сайте')
+    }
     status = models.CharField(
         'Статус заказа',
         max_length=100,
         db_index=True,
         choices=STATUSES,
         default=ACCEPTED,
+    )
+    payment_method = models.CharField(
+        'Способ оплаты',
+        max_length=100,
+        db_index=True,
+        choices=PAYMENT_METHODS,
+        default=ON_SITE,
     )
     firstname = models.CharField(
         'Имя',
@@ -185,6 +198,7 @@ class Order(models.Model):
     comment = models.TextField(
         'Комментарии',
         null=True,
+        blank=True,
     )
     created_at = models.DateTimeField(
         'Дата и время создания',
@@ -199,6 +213,7 @@ class Order(models.Model):
     delivered_at = models.DateTimeField(
         'Дата и время доставки',
         null=True,
+        blank=True,
         db_index=True,
     )
 
