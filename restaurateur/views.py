@@ -6,7 +6,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
 
-from foodcartapp.models import Product, Restaurant, Order
+from foodcartapp.models import Product, Restaurant, Order, RestaurantMenuItem
 
 
 class Login(forms.Form):
@@ -72,9 +72,11 @@ def view_products(request):
     for product in products:
         availability = {
             **default_availability,
-            **{item.restaurant_id: item.availability for item in product.menu_items.all()},
+            **{item.restaurant_id: item.availability for item in
+               product.menu_items.all()},
         }
-        orderer_availability = [availability[restaurant.id] for restaurant in restaurants]
+        orderer_availability = [availability[restaurant.id] for restaurant in
+                                restaurants]
 
         products_with_restaurants.append(
             (product, orderer_availability)
@@ -95,8 +97,41 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
+    available_restaurants = []
+    orders = Order.objects.prefetch_related('item__product')
+    restaurant_menu_items = RestaurantMenuItem.objects\
+                                              .select_related('restaurant') \
+                                              .select_related('product')
+    for order in orders:
+        if order.restaurant:
+            order.status = "Готовится"
+            order.save()
+
+        order_products = order.item.all()
+
+        restaurants = [
+            restaurant_menu_item.restaurant for
+            order_product in
+            order_products for restaurant_menu_item in restaurant_menu_items
+            if restaurant_menu_item.product == order_product.product
+        ]
+
+        def get_available_restaurants(restaurants):
+            results = []
+            restaurant_quantity = \
+                {restaurant: restaurants.count(restaurant) for
+                 restaurant in restaurants}
+            for restaurant, quantity in restaurant_quantity.items():
+                if len(order_products) == quantity:
+                    results.append(restaurant)
+            return results
+
+        available_restaurants.append(get_available_restaurants(restaurants))
+    orders = list(zip(Order.objects.fetch_with_order_price(),
+                  available_restaurants))
+
     return render(request,
                   template_name='order_items.html',
                   context={
-                      'order_items': Order.objects.fetch_with_order_price(),
+                      'order_items': orders,
                   })

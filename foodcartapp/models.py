@@ -1,5 +1,3 @@
-
-
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
@@ -9,8 +7,7 @@ from phonenumber_field.modelfields import PhoneNumberField
 class OrderQuerySet(models.QuerySet):
     def fetch_with_order_price(self):
         total_prices = []
-        for order in self.all().prefetch_related('item') \
-                               .prefetch_related('item__product'):
+        for order in self.all().prefetch_related('item__product'):
             total_prices.append((order.id,
                                  sum(int(order_item.product.price
                                          * order_item.quantity) for
@@ -52,8 +49,8 @@ class ProductQuerySet(models.QuerySet):
     def available(self):
         products = (
             RestaurantMenuItem.objects
-                .filter(availability=True)
-                .values_list('product')
+                              .filter(availability=True)
+                              .values_list('product')
         )
         return self.filter(pk__in=products)
 
@@ -131,7 +128,7 @@ class RestaurantMenuItem(models.Model):
     availability = models.BooleanField(
         'в продаже',
         default=True,
-        db_index=True
+        db_index=True,
     )
 
     class Meta:
@@ -147,12 +144,12 @@ class RestaurantMenuItem(models.Model):
 
 class Order(models.Model):
     ACCEPTED = 'Принят'
-    COLLECTING = 'Собирается'
+    COLLECTING = 'Готовится'
     DELIVERING = 'Курьер выехал'
     DONE = 'Выполнен'
     STATUSES = {
         (ACCEPTED, 'Принят'),
-        (COLLECTING, 'Собирается'),
+        (COLLECTING, 'Готовится'),
         (DELIVERING, 'Курьер выехал'),
         (DONE, 'Выполнен'),
     }
@@ -175,6 +172,14 @@ class Order(models.Model):
         db_index=True,
         choices=PAYMENT_METHODS,
         default=ON_SITE,
+    )
+    restaurant = models.ForeignKey(
+        Restaurant,
+        related_name='order',
+        verbose_name='ресторан, который готовит заказ',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
     )
     firstname = models.CharField(
         'Имя',
