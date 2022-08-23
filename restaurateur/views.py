@@ -1,10 +1,13 @@
+import requests
 from django import forms
+from django.conf import settings
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
+from geopy import distance
 
 from foodcartapp.models import Product, Restaurant, Order, RestaurantMenuItem
 
@@ -99,13 +102,16 @@ def view_restaurants(request):
 def view_orders(request):
     available_restaurants = []
     orders = Order.objects.prefetch_related('item__product')
-    restaurant_menu_items = RestaurantMenuItem.objects\
-                                              .select_related('restaurant') \
-                                              .select_related('product')
+    restaurant_menu_items = RestaurantMenuItem.objects \
+        .select_related('restaurant') \
+        .select_related('product')
     for order in orders:
         if order.restaurant:
             order.status = "Готовится"
             order.save()
+
+        order_location = fetch_coordinates(settings.GEOCODER_API_KEY,
+                                           order.address)
 
         order_products = order.item.all()
 
@@ -117,21 +123,52 @@ def view_orders(request):
         ]
 
         def get_available_restaurants(restaurants):
-            results = []
+            order_available_restaurants = []
             restaurant_quantity = \
                 {restaurant: restaurants.count(restaurant) for
                  restaurant in restaurants}
             for restaurant, quantity in restaurant_quantity.items():
                 if len(order_products) == quantity:
-                    results.append(restaurant)
-            return results
+                    restaurant_location = fetch_coordinates(
+                        settings.GEOCODER_API_KEY,
+                        restaurant.address)
+                    # считаем дистанцию до заказа
+                    restaurant.distance = \
+                        distance.distance(
+                            restaurant_location,
+                            order_location).km
+                    order_available_restaurants.append(restaurant)
+                    # сортируем по дистанции до места доставки
+                    order_available_restaurants = sorted(
+                        order_available_restaurants,
+                        key=lambda restaurant: restaurant.distance)
+            return order_available_restaurants
 
         available_restaurants.append(get_available_restaurants(restaurants))
     orders = list(zip(Order.objects.fetch_with_order_price(),
-                  available_restaurants))
+                      available_restaurants))
 
     return render(request,
                   template_name='order_items.html',
                   context={
                       'order_items': orders,
                   })
+
+
+def fetch_coordinates(apikey, address):
+    base_url = "https://geocode-maps.yandex.ru/1.x"
+    response = requests.get(base_url, params={
+        "geocode": address,
+        "apikey": apikey,
+        "format": "json",
+    })
+    response.raise_for_status()
+    found_places = response.json()['response']['GeoObjectCollection'][
+        'featureMember']
+
+    if not found_places:
+        return None
+
+    most_relevant = found_places[0]
+    lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
+    return lat, lon
