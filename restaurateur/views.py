@@ -10,6 +10,7 @@ from django.views import View
 from geopy import distance
 
 from foodcartapp.models import Product, Restaurant, Order, RestaurantMenuItem
+from locations.models import Location
 
 
 class Login(forms.Form):
@@ -101,17 +102,33 @@ def view_restaurants(request):
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
     available_restaurants = []
-    orders = Order.objects.prefetch_related('item__product')
+    orders = Order.objects.prefetch_related('item__product') \
+                          .select_related('restaurant')
     restaurant_menu_items = RestaurantMenuItem.objects \
         .select_related('restaurant') \
         .select_related('product')
+    locations = Location.objects.all()
+    locations_address = [location.address for location in locations]
     for order in orders:
         if order.restaurant:
             order.status = "Готовится"
             order.save()
 
-        order_location = fetch_coordinates(settings.GEOCODER_API_KEY,
-                                           order.address)
+        if order.address in locations_address:
+            location = list(filter(lambda location: location.address
+                                   == order.address,
+                                   locations))
+            order_lat, order_lon = location[0].lat, location[0].lon
+        else:
+            order_location = fetch_coordinates(settings.GEOCODER_API_KEY,
+                                               order.address)
+
+            Location.objects.create(
+                address=order.address,
+                lat=order_location[0],
+                lon=order_location[1],
+            )
+            order_lat, order_lon = order_location[0], order_location[1]
 
         order_products = order.item.all()
 
@@ -129,14 +146,33 @@ def view_orders(request):
                  restaurant in restaurants}
             for restaurant, quantity in restaurant_quantity.items():
                 if len(order_products) == quantity:
-                    restaurant_location = fetch_coordinates(
-                        settings.GEOCODER_API_KEY,
-                        restaurant.address)
-                    # считаем дистанцию до заказа
-                    restaurant.distance = \
-                        distance.distance(
-                            restaurant_location,
-                            order_location).km
+                    if restaurant.address in locations_address:
+
+                        restaurant_location = list(filter(lambda location:
+                                                          location.address == restaurant.address,
+                                                          locations))
+
+                        restaurant_lat, restaurant_lon = \
+                            restaurant_location[0].lat, \
+                            restaurant_location[0].lon
+                        restaurant.distance = distance.distance(
+                            (restaurant_lat, restaurant_lon),
+                            (order_lat, order_lon)).km
+                    else:
+                        restaurant_location = fetch_coordinates(
+                            settings.GEOCODER_API_KEY,
+                            restaurant.address)
+
+                        Location.objects.create(
+                            address=restaurant.address,
+                            lat=restaurant_location[0],
+                            lon=restaurant_location[1],
+                        )
+
+                        restaurant.distance = distance.distance(
+                            (restaurant_location[0], restaurant_location[1]),
+                            (order_lat, order_lon)).km
+
                     order_available_restaurants.append(restaurant)
                     # сортируем по дистанции до места доставки
                     order_available_restaurants = sorted(
@@ -145,8 +181,9 @@ def view_orders(request):
             return order_available_restaurants
 
         available_restaurants.append(get_available_restaurants(restaurants))
-    orders = list(zip(Order.objects.fetch_with_order_price(),
-                      available_restaurants))
+    orders = list(zip(Order.objects.fetch_with_order_price().select_related(
+        'restaurant'),
+        available_restaurants))
 
     return render(request,
                   template_name='order_items.html',

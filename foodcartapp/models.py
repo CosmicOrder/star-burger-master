@@ -18,7 +18,7 @@ class OrderQuerySet(models.QuerySet):
         for order in self:
             order.total_price = order_and_prices[order.id]
 
-        return list(self)
+        return self
 
 
 class Restaurant(models.Model):
