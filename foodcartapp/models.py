@@ -171,7 +171,7 @@ class Order(models.Model):
         max_length=100,
         db_index=True,
         choices=PAYMENT_METHODS,
-        default=ON_SITE,
+        default=CASH,
     )
     restaurant_preparing_order = models.ForeignKey(
         Restaurant,
