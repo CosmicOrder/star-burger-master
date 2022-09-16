@@ -116,7 +116,7 @@ class RestaurantMenuItem(models.Model):
     restaurant = models.ForeignKey(
         Restaurant,
         related_name='menu_items',
-        verbose_name="ресторан",
+        verbose_name='ресторан',
         on_delete=models.CASCADE,
     )
     product = models.ForeignKey(
@@ -173,7 +173,7 @@ class Order(models.Model):
         choices=PAYMENT_METHODS,
         default=ON_SITE,
     )
-    restaurant = models.ForeignKey(
+    restaurant_preparing_order = models.ForeignKey(
         Restaurant,
         related_name='order',
         verbose_name='ресторан, который готовит заказ',

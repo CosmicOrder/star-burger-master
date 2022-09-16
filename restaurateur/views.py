@@ -103,14 +103,14 @@ def view_restaurants(request):
 def view_orders(request):
     available_restaurants = []
     orders = Order.objects.prefetch_related('items__product') \
-                          .select_related('restaurant')
+                          .select_related('restaurant_preparing_order')
     restaurant_menu_items = RestaurantMenuItem.objects \
         .select_related('restaurant') \
         .select_related('product')
     locations = Location.objects.all()
     locations_address = [location.address for location in locations]
     for order in orders:
-        if order.restaurant:
+        if order.restaurant_preparing_order:
             order.status = "Готовится"
             order.save()
 
@@ -182,7 +182,7 @@ def view_orders(request):
 
         available_restaurants.append(get_available_restaurants(restaurants))
     orders = list(zip(Order.objects.fetch_with_order_price().select_related(
-        'restaurant'),
+        'restaurant_preparing_order'),
         available_restaurants))
 
     return render(request,
