@@ -6,8 +6,8 @@ class Location(models.Model):
         'адрес',
         max_length=100,
     )
-    lat = models.FloatField('широта')
-    lon = models.FloatField('долгота')
+    lat = models.FloatField('широта', null=True)
+    lon = models.FloatField('долгота', null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
