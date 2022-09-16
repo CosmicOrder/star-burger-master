@@ -102,7 +102,7 @@ def view_restaurants(request):
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
     available_restaurants = []
-    orders = Order.objects.prefetch_related('item__product') \
+    orders = Order.objects.prefetch_related('items__product') \
                           .select_related('restaurant')
     restaurant_menu_items = RestaurantMenuItem.objects \
         .select_related('restaurant') \
@@ -130,7 +130,7 @@ def view_orders(request):
             )
             order_lat, order_lon = order_location[0], order_location[1]
 
-        order_products = order.item.all()
+        order_products = order.items.all()
 
         restaurants = [
             restaurant_menu_item.restaurant for

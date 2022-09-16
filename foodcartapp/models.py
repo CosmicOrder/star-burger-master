@@ -7,11 +7,11 @@ from phonenumber_field.modelfields import PhoneNumberField
 class OrderQuerySet(models.QuerySet):
     def fetch_with_order_price(self):
         total_prices = []
-        for order in self.all().prefetch_related('item__product'):
+        for order in self.all().prefetch_related('items__product'):
             total_prices.append((order.id,
                                  sum(int(order_item.product.price
                                          * order_item.quantity) for
-                                     order_item in order.item.all())))
+                                     order_item in order.items.all())))
 
         order_and_prices = dict(total_prices)
 
