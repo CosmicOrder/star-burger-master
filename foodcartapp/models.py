@@ -1,23 +1,18 @@
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import F, ExpressionWrapper, DecimalField
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 
 
 class OrderQuerySet(models.QuerySet):
     def fetch_with_order_price(self):
-        orders_and_prices = []
-        for order in self.all().prefetch_related('items__product'):
-            orders_and_prices.append((order.id,
-                                      sum(int(order_item.product.price *
-                                              order_item.quantity) for
-                                          order_item
-                                          in order.items.all())))
-
-        orders_and_prices = dict(orders_and_prices)
-
-        for order in self:
-            order.total_price = orders_and_prices[order.id]
+        self.annotate(
+            total_price=ExpressionWrapper(
+                F('items__product__price') * F('items__quantity'),
+                output_field=DecimalField(),
+            )
+        )
 
         return self
 
