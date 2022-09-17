@@ -181,9 +181,10 @@ def view_orders(request):
             return order_available_restaurants
 
         available_restaurants.append(get_available_restaurants(restaurants))
-    orders = list(zip(Order.objects.fetch_with_order_price().select_related(
-        'restaurant_preparing_order'),
-        available_restaurants))
+
+    orders = list(zip(Order.objects.fetch_with_order_price()
+                           .select_related('restaurant_preparing_order'),
+                      available_restaurants))
 
     return render(request,
                   template_name='order_items.html',
