@@ -7,14 +7,14 @@ from phonenumber_field.modelfields import PhoneNumberField
 
 class OrderQuerySet(models.QuerySet):
     def fetch_with_order_price(self):
-        self.annotate(
+        orders = self.annotate(
             total_price=ExpressionWrapper(
                 F('items__product__price') * F('items__quantity'),
                 output_field=DecimalField(),
             )
         )
 
-        return self
+        return orders
 
 
 class Restaurant(models.Model):
