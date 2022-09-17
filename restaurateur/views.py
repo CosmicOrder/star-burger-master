@@ -102,6 +102,7 @@ def view_restaurants(request):
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
     available_restaurants = []
+    batch_locations = []
     orders = Order.objects.prefetch_related('items__product') \
                           .select_related('restaurant_preparing_order')
     restaurant_menu_items = RestaurantMenuItem.objects \
@@ -163,11 +164,11 @@ def view_orders(request):
                             settings.GEOCODER_API_KEY,
                             restaurant.address)
 
-                        Location.objects.create(
+                        batch_locations.append(Location(
                             address=restaurant.address,
                             lat=restaurant_location[0],
                             lon=restaurant_location[1],
-                        )
+                        ))
 
                         restaurant.distance = distance.distance(
                             (restaurant_location[0], restaurant_location[1]),
@@ -182,6 +183,7 @@ def view_orders(request):
 
         available_restaurants.append(get_available_restaurants(restaurants))
 
+    Location.objects.bulk_create(batch_locations)
     orders = list(zip(Order.objects.fetch_with_order_price()
                            .select_related('restaurant_preparing_order'),
                       available_restaurants))
