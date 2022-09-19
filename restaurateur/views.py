@@ -108,18 +108,15 @@ def view_orders(request):
     restaurant_menu_items = RestaurantMenuItem.objects \
         .select_related('restaurant') \
         .select_related('product')
-    locations = Location.objects.all()
-    locations_address = [location.address for location in locations]
     for order in orders:
         if order.restaurant_preparing_order:
             order.status = "Готовится"
             order.save()
 
-        if order.address in locations_address:
-            location = list(filter(lambda location: location.address
-                                   == order.address,
-                                   locations))
-            order_lat, order_lon = location[0].lat, location[0].lon
+        order_location = Location.objects.get(address=order.address)
+
+        if order_location:
+            order_lat, order_lon = order_location.lat, order_location.lon
         else:
             order_location = fetch_coordinates(settings.GEOCODER_API_KEY,
                                                order.address)
@@ -146,16 +143,13 @@ def view_orders(request):
                 {restaurant: restaurants.count(restaurant) for
                  restaurant in restaurants}
             for restaurant, quantity in restaurant_quantity.items():
+                restaurant_location = Location.objects.get(
+                    address=restaurant.address)
                 if len(order_products) == quantity:
-                    if restaurant.address in locations_address:
-
-                        restaurant_location = list(filter(lambda location:
-                                                          location.address == restaurant.address,
-                                                          locations))
-
+                    if restaurant_location:
                         restaurant_lat, restaurant_lon = \
-                            restaurant_location[0].lat, \
-                            restaurant_location[0].lon
+                            restaurant_location.lat, \
+                            restaurant_location.lon
                         restaurant.distance = distance.distance(
                             (restaurant_lat, restaurant_lon),
                             (order_lat, order_lon)).km
