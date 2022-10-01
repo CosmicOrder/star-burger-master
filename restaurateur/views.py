@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import user_passes_test
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
@@ -112,12 +113,10 @@ def view_orders(request):
         if order.restaurant_preparing_order:
             order.status = "Готовится"
             order.save()
-
-        order_location = Location.objects.get(address=order.address)
-
-        if order_location:
+        try:
+            order_location = Location.objects.get(address=order.address)
             order_lat, order_lon = order_location.lat, order_location.lon
-        else:
+        except ObjectDoesNotExist:
             order_location = fetch_coordinates(settings.GEOCODER_API_KEY,
                                                order.address)
 
