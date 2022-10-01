@@ -10,7 +10,11 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    products = OrderItemSerializer(many=True, allow_empty=False, write_only=True)
+    products = OrderItemSerializer(
+        many=True,
+        allow_empty=False,
+        write_only=True,
+    )
 
     class Meta:
         model = Order

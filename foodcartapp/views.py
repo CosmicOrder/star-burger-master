@@ -78,7 +78,7 @@ def register_order(request):
     for product in products:
         OrderItem.objects.create(
             order=order,
-            product=Product.objects.get(pk=product['product'].id),
+            product=product['product'],
             quantity=product['quantity'],
         )
 
