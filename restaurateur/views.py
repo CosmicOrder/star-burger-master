@@ -103,7 +103,7 @@ def view_restaurants(request):
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
     available_restaurants = []
-    batch_locations = []
+    batch_order_locations = []
     orders = Order.objects.prefetch_related('items__product') \
                           .select_related('restaurant_preparing_order')
     restaurant_menu_items = RestaurantMenuItem.objects \
@@ -118,9 +118,9 @@ def view_orders(request):
             order_lat, order_lon = order_location.lat, order_location.lon
         except ObjectDoesNotExist:
             order_lat, order_lon = fetch_coordinates(settings.GEOCODER_API_KEY,
-                                               order.address)
+                                                     order.address)
 
-            batch_locations.append(Location(
+            batch_order_locations.append(Location(
                 address=order.address,
                 lat=order_lat,
                 lon=order_lon,
@@ -135,47 +135,14 @@ def view_orders(request):
             if restaurant_menu_item.product == order_product.product
         ]
 
-        def get_available_restaurants(restaurants):
-            order_available_restaurants = []
-            restaurant_quantity = \
-                {restaurant: restaurants.count(restaurant) for
-                 restaurant in restaurants}
-            for restaurant, quantity in restaurant_quantity.items():
-                restaurant_location = Location.objects.get(
-                    address=restaurant.address)
-                if len(order_products) == quantity:
-                    if restaurant_location:
-                        restaurant_lat, restaurant_lon = \
-                            restaurant_location.lat, \
-                            restaurant_location.lon
-                        restaurant.distance = distance.distance(
-                            (restaurant_lat, restaurant_lon),
-                            (order_lat, order_lon)).km
-                    else:
-                        restaurant_lat, restaurant_lon = fetch_coordinates(
-                            settings.GEOCODER_API_KEY,
-                            restaurant.address)
+        available_restaurants.append(get_available_restaurants(
+            restaurants,
+            order_lat,
+            order_lon,
+            order_products,
+        ))
 
-                        batch_locations.append(Location(
-                            address=restaurant.address,
-                            lat=restaurant_lat,
-                            lon=restaurant_lon,
-                        ))
-
-                        restaurant.distance = distance.distance(
-                            (restaurant_lat, restaurant_lon),
-                            (order_lat, order_lon)).km
-
-                    order_available_restaurants.append(restaurant)
-                    # сортируем по дистанции до места доставки
-                    order_available_restaurants = sorted(
-                        order_available_restaurants,
-                        key=lambda restaurant: restaurant.distance)
-            return order_available_restaurants
-
-        available_restaurants.append(get_available_restaurants(restaurants))
-
-    Location.objects.bulk_create(batch_locations)
+    Location.objects.bulk_create(batch_order_locations)
     orders = list(zip(Order.objects.fetch_with_order_price()
                            .select_related('restaurant_preparing_order'),
                       available_restaurants))
@@ -185,3 +152,46 @@ def view_orders(request):
                   context={
                       'order_items': orders,
                   })
+
+
+def get_available_restaurants(restaurants,
+                              order_lat,
+                              order_lon,
+                              order_products,
+                              ):
+    batch_restaurants_locations = []
+    order_available_restaurants = []
+    restaurant_quantity = \
+        {restaurant: restaurants.count(restaurant) for
+         restaurant in restaurants}
+    for restaurant, quantity in restaurant_quantity.items():
+        restaurant_location = Location.objects.get(address=restaurant.address)
+        if len(order_products) == quantity:
+            if restaurant_location:
+                restaurant_lat, restaurant_lon = \
+                    restaurant_location.lat, \
+                    restaurant_location.lon
+                restaurant.distance = distance.distance(
+                    (restaurant_lat, restaurant_lon),
+                    (order_lat, order_lon)).km
+            else:
+                restaurant_lat, restaurant_lon = fetch_coordinates(
+                    settings.GEOCODER_API_KEY,
+                    restaurant.address)
+
+                batch_restaurants_locations.append(Location(
+                    address=restaurant.address,
+                    lat=restaurant_lat,
+                    lon=restaurant_lon,
+                ))
+
+                restaurant.distance = distance.distance(
+                    (restaurant_lat, restaurant_lon),
+                    (order_lat, order_lon)).km
+
+            order_available_restaurants.append(restaurant)
+            # сортируем по дистанции до места доставки
+            order_available_restaurants = sorted(order_available_restaurants,
+                                   key=lambda restaurant: restaurant.distance)
+        Location.objects.bulk_create(batch_restaurants_locations)
+    return order_available_restaurants
