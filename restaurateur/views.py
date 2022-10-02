@@ -117,15 +117,14 @@ def view_orders(request):
             order_location = Location.objects.get(address=order.address)
             order_lat, order_lon = order_location.lat, order_location.lon
         except ObjectDoesNotExist:
-            order_location = fetch_coordinates(settings.GEOCODER_API_KEY,
+            order_lat, order_lon = fetch_coordinates(settings.GEOCODER_API_KEY,
                                                order.address)
 
-            Location.objects.create(
+            batch_locations.append(Location(
                 address=order.address,
-                lat=order_location[0],
-                lon=order_location[1],
-            )
-            order_lat, order_lon = order_location[0], order_location[1]
+                lat=order_lat,
+                lon=order_lon,
+            ))
 
         order_products = order.items.all()
 
@@ -153,18 +152,18 @@ def view_orders(request):
                             (restaurant_lat, restaurant_lon),
                             (order_lat, order_lon)).km
                     else:
-                        restaurant_location = fetch_coordinates(
+                        restaurant_lat, restaurant_lon = fetch_coordinates(
                             settings.GEOCODER_API_KEY,
                             restaurant.address)
 
                         batch_locations.append(Location(
                             address=restaurant.address,
-                            lat=restaurant_location[0],
-                            lon=restaurant_location[1],
+                            lat=restaurant_lat,
+                            lon=restaurant_lon,
                         ))
 
                         restaurant.distance = distance.distance(
-                            (restaurant_location[0], restaurant_location[1]),
+                            (restaurant_lat, restaurant_lon),
                             (order_lat, order_lon)).km
 
                     order_available_restaurants.append(restaurant)
