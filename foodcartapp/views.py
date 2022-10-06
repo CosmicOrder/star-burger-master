@@ -79,6 +79,7 @@ def register_order(request):
         OrderItem.objects.create(
             order=order,
             product=product['product'],
+            price=product['product'].price,
             quantity=product['quantity'],
         )
 
