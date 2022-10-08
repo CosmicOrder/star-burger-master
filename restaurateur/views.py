@@ -162,9 +162,8 @@ def view_orders(request):
             order_lat,
             order_lon,
             order_products,
-        ))
-    if batch_order_locations:
-        Location.objects.bulk_create(batch_order_locations)
+        ))    
+    Location.objects.bulk_create(batch_order_locations)
     orders = list(zip(Order.objects.fetch_with_order_price()
                       .select_related('restaurant_preparing_order'),
                       available_restaurants))
