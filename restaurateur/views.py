@@ -104,19 +104,39 @@ def view_restaurants(request):
 def view_orders(request):
     available_restaurants = []
     batch_order_locations = []
+    restaurants = Restaurant.objects.all()
     orders = Order.objects.prefetch_related('items__product') \
-                          .select_related('restaurant_preparing_order')
+        .select_related('restaurant_preparing_order')
     restaurant_menu_items = RestaurantMenuItem.objects \
         .select_related('restaurant') \
         .select_related('product')
+
+    restaurants_addresses = [restaurant.address for restaurant in restaurants]
+    orders_addresses = [order.address for order in orders]
+
+    restaurant_locations = Location.objects.filter(
+        address__in=restaurants_addresses)
+
+    order_locations = Location.objects.filter(address__in=orders_addresses)
+
+    restaurant_locations_addresses = [restaurant_location.address for
+                                      restaurant_location in
+                                      restaurant_locations]
+    order_locations_addresses = [order_location.address for order_location in
+                                 order_locations]
+
     for order in orders:
         if order.restaurant_preparing_order:
             order.status = "Готовится"
             order.save()
-        try:
-            order_location = Location.objects.get(address=order.address)
+
+        if order.address in order_locations_addresses:
+            order_location = list(filter(lambda location: location.address
+                                                          == order.address,
+                                         order_locations)).pop()
+
             order_lat, order_lon = order_location.lat, order_location.lon
-        except ObjectDoesNotExist:
+        else:
             order_lat, order_lon = fetch_coordinates(settings.GEOCODER_API_KEY,
                                                      order.address)
 
@@ -137,14 +157,16 @@ def view_orders(request):
 
         available_restaurants.append(get_available_restaurants(
             restaurants,
+            restaurant_locations,
+            restaurant_locations_addresses,
             order_lat,
             order_lon,
             order_products,
         ))
-
-    Location.objects.bulk_create(batch_order_locations)
+    if batch_order_locations:
+        Location.objects.bulk_create(batch_order_locations)
     orders = list(zip(Order.objects.fetch_with_order_price()
-                           .select_related('restaurant_preparing_order'),
+                      .select_related('restaurant_preparing_order'),
                       available_restaurants))
 
     return render(request,
@@ -155,6 +177,8 @@ def view_orders(request):
 
 
 def get_available_restaurants(restaurants,
+                              restaurant_locations,
+                              restaurant_locations_addresses,
                               order_lat,
                               order_lon,
                               order_products,
@@ -165,33 +189,37 @@ def get_available_restaurants(restaurants,
         {restaurant: restaurants.count(restaurant) for
          restaurant in restaurants}
     for restaurant, quantity in restaurant_quantity.items():
-        restaurant_location = Location.objects.get(address=restaurant.address)
-        if len(order_products) == quantity:
-            if restaurant_location:
-                restaurant_lat, restaurant_lon = \
-                    restaurant_location.lat, \
-                    restaurant_location.lon
-                restaurant.distance = distance.distance(
-                    (restaurant_lat, restaurant_lon),
-                    (order_lat, order_lon)).km
-            else:
-                restaurant_lat, restaurant_lon = fetch_coordinates(
-                    settings.GEOCODER_API_KEY,
-                    restaurant.address)
+        if restaurant.address in restaurant_locations_addresses:
+            restaurant_location = list(filter(lambda location:
+                                              location.address == restaurant.address,
+                                              restaurant_locations)).pop()
+            if len(order_products) == quantity:
+                if restaurant_location:
+                    restaurant_lat, restaurant_lon = \
+                        restaurant_location.lat, \
+                        restaurant_location.lon
+                    restaurant.distance = distance.distance(
+                        (restaurant_lat, restaurant_lon),
+                        (order_lat, order_lon)).km
+                else:
+                    restaurant_lat, restaurant_lon = fetch_coordinates(
+                        settings.GEOCODER_API_KEY,
+                        restaurant.address)
 
-                batch_restaurants_locations.append(Location(
-                    address=restaurant.address,
-                    lat=restaurant_lat,
-                    lon=restaurant_lon,
-                ))
+                    batch_restaurants_locations.append(Location(
+                        address=restaurant.address,
+                        lat=restaurant_lat,
+                        lon=restaurant_lon,
+                    ))
 
-                restaurant.distance = distance.distance(
-                    (restaurant_lat, restaurant_lon),
-                    (order_lat, order_lon)).km
+                    restaurant.distance = distance.distance(
+                        (restaurant_lat, restaurant_lon),
+                        (order_lat, order_lon)).km
 
-            order_available_restaurants.append(restaurant)
-            # сортируем по дистанции до места доставки
-            order_available_restaurants = sorted(order_available_restaurants,
-                                   key=lambda restaurant: restaurant.distance)
-        Location.objects.bulk_create(batch_restaurants_locations)
+                order_available_restaurants.append(restaurant)
+    # сортируем по дистанции до места доставки
+    order_available_restaurants = sorted(order_available_restaurants,
+                                         key=lambda restaurant:
+                                         restaurant.distance)
+    Location.objects.bulk_create(batch_restaurants_locations)
     return order_available_restaurants
