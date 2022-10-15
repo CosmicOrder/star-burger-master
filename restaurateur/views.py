@@ -186,34 +186,36 @@ def get_available_restaurants(restaurants,
         {restaurant: restaurants.count(restaurant) for
          restaurant in restaurants}
     for restaurant, quantity in restaurant_quantity.items():
-        if restaurant.address in restaurant_locations_addresses:
-            restaurant_location = list(filter(lambda location:
-                                              location.address == restaurant.address,
-                                              restaurant_locations)).pop()
-            if len(order_products) == quantity:
-                if restaurant_location:
-                    restaurant_lat, restaurant_lon = \
-                        restaurant_location.lat, \
-                        restaurant_location.lon
-                    restaurant.distance = distance.distance(
-                        (restaurant_lat, restaurant_lon),
-                        (order_lat, order_lon)).km
-                else:
-                    restaurant_lat, restaurant_lon = fetch_coordinates(
-                        settings.GEOCODER_API_KEY,
-                        restaurant.address)
+        if restaurant.address not in restaurant_locations_addresses:
+            continue
+        restaurant_location = list(filter(lambda location:
+                                          location.address == restaurant.address,
+                                          restaurant_locations)).pop()
+        if len(order_products) != quantity:
+            continue
+        if restaurant_location:
+            restaurant_lat, restaurant_lon = \
+                restaurant_location.lat, \
+                restaurant_location.lon
+            restaurant.distance = distance.distance(
+                (restaurant_lat, restaurant_lon),
+                (order_lat, order_lon)).km
+        else:
+            restaurant_lat, restaurant_lon = fetch_coordinates(
+                settings.GEOCODER_API_KEY,
+                restaurant.address)
 
-                    batch_restaurants_locations.append(Location(
-                        address=restaurant.address,
-                        lat=restaurant_lat,
-                        lon=restaurant_lon,
-                    ))
+            batch_restaurants_locations.append(Location(
+                address=restaurant.address,
+                lat=restaurant_lat,
+                lon=restaurant_lon,
+            ))
 
-                    restaurant.distance = distance.distance(
-                        (restaurant_lat, restaurant_lon),
-                        (order_lat, order_lon)).km
+            restaurant.distance = distance.distance(
+                (restaurant_lat, restaurant_lon),
+                (order_lat, order_lon)).km
 
-                order_available_restaurants.append(restaurant)
+        order_available_restaurants.append(restaurant)
     order_available_restaurants = sorted(order_available_restaurants,
                                          key=lambda restaurant:
                                          restaurant.distance)
