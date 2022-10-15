@@ -151,9 +151,11 @@ class Order(models.Model):
     }
     CASH = 'При получении'
     ON_SITE = 'На сайте'
+    UNDEFINED = 'Способ оплаты не выбран'
     PAYMENT_METHODS = {
         (CASH, 'При получении'),
-        (ON_SITE, 'На сайте')
+        (ON_SITE, 'На сайте'),
+        (UNDEFINED, 'Способ оплаты не выбран')
     }
     status = models.CharField(
         'Статус заказа',
@@ -167,6 +169,7 @@ class Order(models.Model):
         max_length=100,
         db_index=True,
         choices=PAYMENT_METHODS,
+        default=UNDEFINED,
     )
     restaurant_preparing_order = models.ForeignKey(
         Restaurant,
