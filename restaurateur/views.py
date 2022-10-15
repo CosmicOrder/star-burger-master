@@ -104,24 +104,17 @@ def view_restaurants(request):
 def view_orders(request):
     available_restaurants = []
     batch_order_locations = []
-    restaurants = Restaurant.objects.all()
+
     orders = Order.objects.prefetch_related('items__product') \
         .select_related('restaurant_preparing_order')
     restaurant_menu_items = RestaurantMenuItem.objects \
         .select_related('restaurant') \
         .select_related('product')
 
-    restaurants_addresses = [restaurant.address for restaurant in restaurants]
     orders_addresses = [order.address for order in orders]
-
-    restaurant_locations = Location.objects.filter(
-        address__in=restaurants_addresses)
 
     order_locations = Location.objects.filter(address__in=orders_addresses)
 
-    restaurant_locations_addresses = [restaurant_location.address for
-                                      restaurant_location in
-                                      restaurant_locations]
     order_locations_addresses = [order_location.address for order_location in
                                  order_locations]
 
@@ -157,8 +150,6 @@ def view_orders(request):
 
         available_restaurants.append(get_available_restaurants(
             restaurants,
-            restaurant_locations,
-            restaurant_locations_addresses,
             order_lat,
             order_lon,
             order_products,
@@ -176,12 +167,19 @@ def view_orders(request):
 
 
 def get_available_restaurants(restaurants,
-                              restaurant_locations,
-                              restaurant_locations_addresses,
                               order_lat,
                               order_lon,
                               order_products,
                               ):
+
+    all_restaurants = Restaurant.objects.all()
+    restaurants_addresses = [restaurant.address for restaurant in
+                             all_restaurants]
+    restaurant_locations = Location.objects.filter(
+        address__in=restaurants_addresses)
+    restaurant_locations_addresses = [restaurant_location.address for
+                                      restaurant_location in
+                                      restaurant_locations]
     batch_restaurants_locations = []
     order_available_restaurants = []
     restaurant_quantity = \
