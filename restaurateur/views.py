@@ -214,7 +214,6 @@ def get_available_restaurants(restaurants,
                         (order_lat, order_lon)).km
 
                 order_available_restaurants.append(restaurant)
-    # сортируем по дистанции до места доставки
     order_available_restaurants = sorted(order_available_restaurants,
                                          key=lambda restaurant:
                                          restaurant.distance)
