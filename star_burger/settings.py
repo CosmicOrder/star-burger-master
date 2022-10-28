@@ -14,7 +14,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', True)
-GEOCODER_API_KEY = os.getenv('GEOCODER_API_KEY')
+GEOCODER_API_KEY = env('GEOCODER_API_KEY')
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
 
@@ -42,6 +42,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'rollbar.contrib.django.middleware.RollbarNotifierMiddleware',
 ]
 
 ROOT_URLCONF = 'star_burger.urls'
@@ -126,3 +127,11 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "assets"),
     os.path.join(BASE_DIR, "bundles"),
 ]
+
+
+ROLLBAR = {
+    'access_token': '6f1b2573f71147ab9d34e6e882ec7563',
+    'environment': env('ROLLBAR_ENV', 'development'),
+    'code_version': '1.0',
+    'root': BASE_DIR,
+}
