@@ -166,7 +166,7 @@ ROLLBAR = {
 - `ALLOWED_HOSTS` — [см. документацию Django](https://docs.djangoproject.com/en/3.1/ref/settings/#allowed-hosts)
 - `GEOCODER_API_KEY` – API ключ Яндекс-геокодера
 - `ROLLBAR_ENV` - название окружения, в котором Rollbar отловил исключение. 
-Поставьте 'development'.
+Поставьте 'production'.
 
 ## Цели проекта
 
