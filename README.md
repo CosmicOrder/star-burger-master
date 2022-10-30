@@ -165,8 +165,12 @@ ROLLBAR = {
 - `SECRET_KEY` — секретный ключ проекта. Он отвечает за шифрование на сайте. Например, им зашифрованы все пароли на вашем сайте.
 - `ALLOWED_HOSTS` — [см. документацию Django](https://docs.djangoproject.com/en/3.1/ref/settings/#allowed-hosts)
 - `GEOCODER_API_KEY` – API ключ Яндекс-геокодера
-- `ROLLBAR_ENV` - название окружения, в котором Rollbar отловил исключение. 
-Поставьте 'production'.
+- `ROLLBAR_ENV` - название окружения, в котором Rollbar отловил исключение. Поставьте 'production'.
+- `DATABASE_URL` - однострочный адрес к базе данных, например: sqlite:///db.sqlite3 или 
+postgres://USER:PASSWORD@HOST/NAME. Это позволяет легко переключаться между базами данных: 
+PostgreSQL, MySQL, SQLite — без разницы, нужно лишь подставить нужный адрес. 
+Больше информаици в [документации](https://pypi.org/project/dj-database-url/).
+  
 
 ## Цели проекта
 
