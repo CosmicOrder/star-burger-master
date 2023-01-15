@@ -6,7 +6,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 npm ci --dev
 python manage.py collectstatic --noinput
-python manage.py migrate
+python manage.py migrate --noinput
 systemctl reload nginx
 curl --request POST \
      --url https://api.rollbar.com/api/1/deploy \
