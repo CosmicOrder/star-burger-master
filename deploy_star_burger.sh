@@ -19,4 +19,6 @@ curl --request POST \
      "revision": "'$(git rev-parse HEAD)'"
 }
 '
+./node_modules/.bin/parcel build bundles-src/index.js --dist-dir bundles --public-url="./"
+
 echo "Диплой прошёл успешно!"
